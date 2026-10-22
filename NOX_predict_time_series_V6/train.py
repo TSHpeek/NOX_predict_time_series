@@ -11,7 +11,7 @@ def train(model, train_dataset, val_dataset, lr, epoch_num, batch_size, device):
     model = model.to(device)
     # 定义优化器
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    # 定义训练和验证误差每轮变化列表
+    # 定义记录每轮训练、验证损失的列表
     train_loss_list = []
     val_loss_list = []
 

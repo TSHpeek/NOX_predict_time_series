@@ -31,23 +31,26 @@ def run_train():
     plt.show()
 
 def run_test(target_mean, target_scale):
-    all_preds, all_targets = test(test_dataset, model, device)  # (N,5,1)
+    all_preds, all_targets = test(
+        test_dataset, model, device, target_mean, target_scale
+    )  # (N,5,1), still in standardized space
 
     # 模型在标准化空间训练，评估和作图前先还原到原始 NOX 单位。
-    target_mean = np.asarray(target_mean).reshape(1, 1, -1)
+    target_mean = np.asarray(target_mean).reshape(1, 1, -1)  # 把均值和尺度整理成适合计算的形状
     target_scale = np.asarray(target_scale).reshape(1, 1, -1)
+    # 原始值 = 标准化值 * 尺度 + 均值
     all_preds = all_preds * target_scale + target_mean
     all_targets = all_targets * target_scale + target_mean
 
-    # Persistence baseline: repeat the last observed target value for all
-    # forecast steps. This is only an evaluation reference.
-    X_test = test_dataset.tensors[0].cpu().numpy()
-    target_idx = TARGET_FEATURE_INDICES[0]
-    last_observed = X_test[:, -1, target_idx]
-    baseline_preds = np.repeat(
-        last_observed[:, None, None], OUTPUT_LEN, axis=1
-    )
-    baseline_preds = baseline_preds * target_scale + target_mean
+    # # Persistence baseline: repeat the last observed target value for all
+    # # forecast steps. This is only an evaluation reference.
+    # X_test = test_dataset.tensors[0].cpu().numpy()
+    # target_idx = TARGET_FEATURE_INDICES[0]
+    # last_observed = X_test[:, -1, target_idx]
+    # baseline_preds = np.repeat(
+    #     last_observed[:, None, None], OUTPUT_LEN, axis=1
+    # )
+    # baseline_preds = baseline_preds * target_scale + target_mean
 
     print("\n" + "=" * 60)
     print("按预测步长评估...")
@@ -57,24 +60,26 @@ def run_test(target_mean, target_scale):
     for horizon in range(OUTPUT_LEN):  # horizon:预测窗口中的第几分钟
         preds = all_preds[:, horizon, 0]  # 取所有预测窗口中第horizon分钟的预测值
         targets = all_targets[:, horizon, 0]  # # 取所有预测窗口中第horizon分钟的真实值
-        baseline = baseline_preds[:, horizon, 0]
+        # baseline = baseline_preds[:, horizon, 0]
         # 预测值评估
         mae = np.mean(np.abs(preds - targets))
         mse = np.mean((preds - targets) ** 2)
         rmse = np.sqrt(mse)
         mape = np.mean(np.abs((targets - preds) / (targets + 1e-8))) * 100
         r2 = r2_score(targets, preds)
-        # 基线评估
-        baseline_mae = np.mean(np.abs(baseline - targets))
-        baseline_mse = np.mean((baseline - targets) ** 2)
-        baseline_rmse = np.sqrt(baseline_mse)
-        baseline_mape = np.mean(np.abs((targets - baseline) / (targets + 1e-8))) * 100
-        baseline_r2 = r2_score(targets, baseline)
-        metrics.append([horizon + 1, mae, mse, rmse, mape, r2,
-                        baseline_mae, baseline_mse, baseline_rmse, baseline_mape, baseline_r2])  # 记录数据，保存为.csv文件
+        # # 基线评估
+        # baseline_mae = np.mean(np.abs(baseline - targets))
+        # baseline_mse = np.mean((baseline - targets) ** 2)
+        # baseline_rmse = np.sqrt(baseline_mse)
+        # baseline_mape = np.mean(np.abs((targets - baseline) / (targets + 1e-8))) * 100
+        # baseline_r2 = r2_score(targets, baseline)
+        metrics.append([horizon + 1, mae, mse, rmse, mape, r2
+                        # ,baseline_mae, baseline_mse, baseline_rmse, baseline_mape, baseline_r2
+                        ])  # 记录数据，保存为.csv文件
 
-        print(f"第 {horizon + 1} 分钟 - 模型 MAE: {mae:.4f}, RMSE: {rmse:.4f}, MAPE: {mape:.2f}%, R²: {r2:.4f}| "
-              f"基线 MAE: {baseline_mae:.4f}, RMSE: {baseline_rmse:.4f}, MAPE: {baseline_mape:.2f}%, R²: {baseline_r2:.4f}")
+        print(f"第 {horizon + 1} 分钟 - 模型 MAE: {mae:.4f}, MSE: {mse:.4f},RMSE: {rmse:.4f}, MAPE: {mape:.2f}%, R²: {r2:.4f} "
+              # f"基线 MAE: {baseline_mae:.4f}, RMSE: {baseline_rmse:.4f}, MAPE: {baseline_mape:.2f}%, R²: {baseline_r2:.4f}"
+              )
 
         # 画图
         plt.figure(figsize=(12, 6))
@@ -95,12 +100,13 @@ def run_test(target_mean, target_scale):
         np.asarray(metrics),  # 把metrics转成numpy数组，并传入
         delimiter=",",  # 列之间用,间隔，标准的csv格式
         header=(
-            "horizon_minute,model_mae,model_mse,model_rmse,model_mape_percent,model_r2,"
-            "baseline_mae,baseline_mse,baseline_rmse,baseline_mape_percent,baseline_r2"
+            "horizon_minute,model_mae,model_mse,model_rmse,model_mape_percent,model_r2"
+            # ",baseline_mae,baseline_mse,baseline_rmse,baseline_mape_percent,baseline_r2"
         ),  # .csv文件表头
         comments="",
         # fmt="%.4f"  # 保留4位小数，不用科学计数法
-        fmt=["%d"] + ["%.4f"] * 10
+        # fmt=["%d"] + ["%.4f"] * 10
+        fmt=["%d"] + ["%.4f"] * 5
     )
 
 def print_model_structure():
