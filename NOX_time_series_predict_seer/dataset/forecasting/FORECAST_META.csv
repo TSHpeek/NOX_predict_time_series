@@ -1,0 +1,3 @@
+file_name,freq,if_univariate,has_timestamp,size,length,if_trend,if_season,trend,seasonal,stationary,transition,shifting,correlation
+changshu_smoke.csv,other,False,True,user,1024.0,,,,,,,,
+常熟发电#5机组脱硝10天.csv,other,False,True,user,950401.0,,,,,,,,
